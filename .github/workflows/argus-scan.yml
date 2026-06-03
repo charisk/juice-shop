@@ -1,0 +1,90 @@
+name: Argus scan (no CodeQL)
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ARGUS_BIN: .github/bin/argus-linux-x64
+      ARGUS_CONFIG: .github/argus/config.yml
+      ARGUS_OUTPUT_DIR: .github/argus/output
+      GH_TOKEN: ${{ secrets.ARGUS_GH_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate required inputs
+        run: |
+          if [ ! -f "$ARGUS_BIN" ]; then
+            echo "Missing Argus binary at $ARGUS_BIN"
+            echo "Copy the Linux x64 Argus binary into that path."
+            exit 1
+          fi
+          if [ -z "$GH_TOKEN" ]; then
+            echo "Missing secret ARGUS_GH_TOKEN"
+            echo "Add a token with Copilot access as a repository secret."
+            exit 1
+          fi
+          chmod +x "$ARGUS_BIN"
+
+      - name: Create Argus config (CodeQL disabled)
+        run: |
+          mkdir -p "$(dirname "$ARGUS_CONFIG")"
+          cat > "$ARGUS_CONFIG" <<'YAML'
+          params:
+            model: claude-sonnet-4.5
+
+          analyzers:
+            threat-model:
+              mode: skip
+              params: {}
+
+            llm-scan:
+              mode: run
+              params: {}
+
+            llm-rank:
+              mode: skip
+              params: {}
+
+            llm-agentic-rank:
+              mode: skip
+              params: {}
+
+            llm-per-file:
+              mode: skip
+              params: {}
+
+            codeql-scan:
+              mode: skip
+              params: {}
+
+            dedup:
+              mode: run
+              params: {}
+
+            summarization:
+              mode: run
+              params:
+                maxActions: 5
+          YAML
+
+      - name: Run Argus scan
+        run: |
+          mkdir -p "$ARGUS_OUTPUT_DIR"
+          "$ARGUS_BIN" scan . --config "$ARGUS_CONFIG" --data-dir "$ARGUS_OUTPUT_DIR"
+
+      - name: Upload Argus artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: argus-output
+          path: .github/argus/output
+          if-no-files-found: warn
