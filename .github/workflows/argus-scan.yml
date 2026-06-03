@@ -34,6 +34,9 @@ jobs:
           fi
           chmod +x "$ARGUS_BIN"
 
+      - name: Install Copilot runtime dependency for Argus binary
+        run: npm install --no-save @github/copilot@1.0.46
+
       - name: Create Argus config (CodeQL disabled)
         run: |
           mkdir -p "$(dirname "$ARGUS_CONFIG")"
