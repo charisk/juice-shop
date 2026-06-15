@@ -15,7 +15,7 @@ jobs:
       ARGUS_BIN: .github/bin/argus-linux-x64
       ARGUS_CONFIG: .github/argus/config.yml
       ARGUS_OUTPUT_DIR: .github/argus/output
-      GH_TOKEN: ${{ secrets.ARGUS_GH_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
